@@ -32,7 +32,7 @@ spec:
         accessModes: ["ReadWriteOnce"]
         resources:
           requests:
-            storage: 1Gi
+            storage: 5Gi
 
   templates:
     # -------------------------------------------------------------------------
@@ -50,7 +50,7 @@ spec:
                 - name: dockerfile
                   value: ado-agent-alpine.dockerfile
                 - name: image
-                  value: "ghcr.io/kutzlab-org/ado-agent-alpine:{{workflow.parameters.git-sha}}"
+                  value: "kutzlabacr.azurecr.io/ado-agent-alpine:{{workflow.parameters.git-sha}}"
           - name: build-ubuntu
             template: build-image
             arguments:
@@ -58,7 +58,7 @@ spec:
                 - name: dockerfile
                   value: ado-agent-ubuntu.dockerfile
                 - name: image
-                  value: "ghcr.io/kutzlab-org/ado-agent-ubuntu:{{workflow.parameters.git-sha}}"
+                  value: "kutzlabacr.azurecr.io/ado-agent-ubuntu:{{workflow.parameters.git-sha}}"
 
         - - name: deploy-alpine
             template: deploy-image
@@ -69,7 +69,7 @@ spec:
                 - name: container
                   value: ado-agent-alpine
                 - name: image
-                  value: "ghcr.io/kutzlab-org/ado-agent-alpine:{{workflow.parameters.git-sha}}"
+                  value: "kutzlabacr.azurecr.io/ado-agent-alpine:{{workflow.parameters.git-sha}}"
           - name: deploy-ubuntu
             template: deploy-image
             arguments:
@@ -79,7 +79,7 @@ spec:
                 - name: container
                   value: ado-agent-ubuntu
                 - name: image
-                  value: "ghcr.io/kutzlab-org/ado-agent-ubuntu:{{workflow.parameters.git-sha}}"
+                  value: "kutzlabacr.azurecr.io/ado-agent-ubuntu:{{workflow.parameters.git-sha}}"
 
     # -------------------------------------------------------------------------
     # Clone the repository into the shared workspace
