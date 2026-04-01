@@ -27,6 +27,8 @@ spec:
       labels:
         app: ado-agent-alpine
     spec:
+      imagePullSecrets:
+        - name: kutzlabacr
       containers:
         - name: ado-agent-alpine
           image: kutzlabacr.azurecr.io/ado-agent-alpine:latest
@@ -75,6 +77,8 @@ spec:
       labels:
         app: ado-agent-ubuntu
     spec:
+      imagePullSecrets:
+        - name: kutzlabacr
       containers:
         - name: ado-agent-ubuntu
           image: kutzlabacr.azurecr.io/ado-agent-ubuntu:latest
