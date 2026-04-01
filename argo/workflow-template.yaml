@@ -105,6 +105,7 @@ spec:
           - name: image
       container:
         image: gcr.io/kaniko-project/executor:latest
+        command: [/kaniko/executor]
         args:
           - "--dockerfile=/workspace/{{inputs.parameters.dockerfile}}"
           - "--context=dir:///workspace"
