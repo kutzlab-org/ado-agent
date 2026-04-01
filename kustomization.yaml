@@ -5,9 +5,10 @@ metadata:
   name: ado-agent
   namespace: flux-system
 spec:
-  interval: 2m0s
+  interval: 1m0s
   path: ./infra
   prune: true
+  force: true
   sourceRef:
     kind: GitRepository
     name: ado-agent
