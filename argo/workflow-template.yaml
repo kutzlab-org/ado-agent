@@ -1,0 +1,146 @@
+# WorkflowTemplate: clone → build alpine + ubuntu (parallel) → deploy both (parallel).
+#
+# Prerequisites:
+#   1. A registry credentials secret for Kaniko:
+#        kubectl create secret docker-registry registry-credentials \
+#          --docker-server=<YOUR_REGISTRY> \
+#          --docker-username=<USERNAME> \
+#          --docker-password=<PASSWORD_OR_TOKEN> \
+#          -n ado-agent
+#
+#   2. Update IMAGE_REGISTRY below to match your container registry,
+#      e.g. ghcr.io/kutzlab-org  or  docker.io/kutzlaborgn
+#
+#   3. The two Deployments in deployments.yaml must already exist in the cluster.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: ado-agent-build-deploy
+  namespace: ado-agent
+spec:
+  serviceAccountName: ado-agent-workflow-sa
+
+  arguments:
+    parameters:
+      - name: git-sha
+        value: "latest"
+
+  # Shared workspace volume passed between the clone and build steps.
+  volumeClaimTemplates:
+    - metadata:
+        name: workspace
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi
+
+  templates:
+    # -------------------------------------------------------------------------
+    # Entry point — three sequential stage groups
+    # -------------------------------------------------------------------------
+    - name: main
+      steps:
+        - - name: clone
+            template: clone-repo
+
+        - - name: build-alpine
+            template: build-image
+            arguments:
+              parameters:
+                - name: dockerfile
+                  value: ado-agent-alpine.dockerfile
+                - name: image
+                  value: "ghcr.io/kutzlab-org/ado-agent-alpine:{{workflow.parameters.git-sha}}"
+          - name: build-ubuntu
+            template: build-image
+            arguments:
+              parameters:
+                - name: dockerfile
+                  value: ado-agent-ubuntu.dockerfile
+                - name: image
+                  value: "ghcr.io/kutzlab-org/ado-agent-ubuntu:{{workflow.parameters.git-sha}}"
+
+        - - name: deploy-alpine
+            template: deploy-image
+            arguments:
+              parameters:
+                - name: deployment
+                  value: ado-agent-alpine
+                - name: container
+                  value: ado-agent-alpine
+                - name: image
+                  value: "ghcr.io/kutzlab-org/ado-agent-alpine:{{workflow.parameters.git-sha}}"
+          - name: deploy-ubuntu
+            template: deploy-image
+            arguments:
+              parameters:
+                - name: deployment
+                  value: ado-agent-ubuntu
+                - name: container
+                  value: ado-agent-ubuntu
+                - name: image
+                  value: "ghcr.io/kutzlab-org/ado-agent-ubuntu:{{workflow.parameters.git-sha}}"
+
+    # -------------------------------------------------------------------------
+    # Clone the repository into the shared workspace
+    # -------------------------------------------------------------------------
+    - name: clone-repo
+      container:
+        image: alpine/git:latest
+        command: [git, clone, "https://github.com/kutzlab-org/ado-agent.git", /workspace]
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+
+    # -------------------------------------------------------------------------
+    # Build and push a single image with Kaniko
+    # -------------------------------------------------------------------------
+    - name: build-image
+      inputs:
+        parameters:
+          - name: dockerfile
+          - name: image
+      container:
+        image: gcr.io/kaniko-project/executor:latest
+        args:
+          - "--dockerfile=/workspace/{{inputs.parameters.dockerfile}}"
+          - "--context=dir:///workspace"
+          - "--destination={{inputs.parameters.image}}"
+          - "--cache=true"
+          - "--cache-ttl=24h"
+        volumeMounts:
+          - name: workspace
+            mountPath: /workspace
+          - name: registry-credentials
+            mountPath: /kaniko/.docker
+      volumes:
+        - name: registry-credentials
+          secret:
+            secretName: registry-credentials
+            items:
+              - key: .dockerconfigjson
+                path: config.json
+
+    # -------------------------------------------------------------------------
+    # Roll out the new image tag to a Deployment
+    # -------------------------------------------------------------------------
+    - name: deploy-image
+      inputs:
+        parameters:
+          - name: deployment
+          - name: container
+          - name: image
+      container:
+        image: bitnami/kubectl:latest
+        command:
+          - kubectl
+          - set
+          - image
+          - "deployment/{{inputs.parameters.deployment}}"
+          - "{{inputs.parameters.container}}={{inputs.parameters.image}}"
+          - -n
+          - ado-agent
+
+  entrypoint: main

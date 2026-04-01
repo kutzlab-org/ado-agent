@@ -1,0 +1,37 @@
+# ServiceAccount used by workflow pods and the Argo Events sensor.
+# Both need permissions to submit Workflows and update Deployments.
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ado-agent-workflow-sa
+  namespace: ado-agent
+---
+# Allows the workflow to patch Deployments (for the deploy steps)
+# and allows the sensor to submit Workflows.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ado-agent-workflow-role
+  namespace: ado-agent
+rules:
+  - apiGroups: ["argoproj.io"]
+    resources: ["workflows", "workflowtemplates"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ado-agent-workflow-rolebinding
+  namespace: ado-agent
+subjects:
+  - kind: ServiceAccount
+    name: ado-agent-workflow-sa
+    namespace: ado-agent
+roleRef:
+  kind: Role
+  apiGroup: rbac.authorization.k8s.io
+  name: ado-agent-workflow-role

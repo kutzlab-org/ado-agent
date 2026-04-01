@@ -1,0 +1,107 @@
+# Kubernetes Deployments for both Azure Pipelines agent variants.
+#
+# Prerequisites — create the ADO secrets before applying:
+#   kubectl create secret generic ado-agent-secret \
+#     --from-literal=AZP_URL=https://dev.azure.com/<YOUR_ORG> \
+#     --from-literal=AZP_TOKEN=<YOUR_PAT_OR_SP_TOKEN> \
+#     --from-literal=AZP_POOL=<YOUR_AGENT_POOL> \
+#     -n ado-agent
+#
+# Apply with:
+#   kubectl apply -f deployments.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ado-agent-alpine
+  namespace: ado-agent
+  labels:
+    app: ado-agent-alpine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ado-agent-alpine
+  template:
+    metadata:
+      labels:
+        app: ado-agent-alpine
+    spec:
+      containers:
+        - name: ado-agent-alpine
+          image: ghcr.io/kutzlab-org/ado-agent-alpine:latest
+          env:
+            - name: AZP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ado-agent-secret
+                  key: AZP_URL
+            - name: AZP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: ado-agent-secret
+                  key: AZP_TOKEN
+            - name: AZP_POOL
+              valueFrom:
+                secretKeyRef:
+                  name: ado-agent-secret
+                  key: AZP_POOL
+            - name: AZP_AGENT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ado-agent-ubuntu
+  namespace: ado-agent
+  labels:
+    app: ado-agent-ubuntu
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ado-agent-ubuntu
+  template:
+    metadata:
+      labels:
+        app: ado-agent-ubuntu
+    spec:
+      containers:
+        - name: ado-agent-ubuntu
+          image: ghcr.io/kutzlab-org/ado-agent-ubuntu:latest
+          env:
+            - name: AZP_URL
+              valueFrom:
+                secretKeyRef:
+                  name: ado-agent-secret
+                  key: AZP_URL
+            - name: AZP_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: ado-agent-secret
+                  key: AZP_TOKEN
+            - name: AZP_POOL
+              valueFrom:
+                secretKeyRef:
+                  name: ado-agent-secret
+                  key: AZP_POOL
+            - name: AZP_AGENT_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1"
+              memory: "2Gi"
