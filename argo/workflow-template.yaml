@@ -6,12 +6,9 @@
 #          --docker-server=<YOUR_REGISTRY> \
 #          --docker-username=<USERNAME> \
 #          --docker-password=<PASSWORD_OR_TOKEN> \
-#          -n ado-agent
+#          -n argowf
 #
-#   2. Update IMAGE_REGISTRY below to match your container registry,
-#      e.g. ghcr.io/kutzlab-org  or  docker.io/kutzlaborgn
-#
-#   3. The two Deployments in deployments.yaml must already exist in the cluster.
+#   2. The two Deployments in deployments.yaml must already exist in the cluster.
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
@@ -27,16 +24,6 @@ spec:
       - name: git-sha
         value: "latest"
 
-  # Shared workspace volume passed between the clone and build steps.
-  volumeClaimTemplates:
-    - metadata:
-        name: workspace
-      spec:
-        accessModes: ["ReadWriteOnce"]
-        resources:
-          requests:
-            storage: 5Gi
-
   templates:
     # -------------------------------------------------------------------------
     # Entry point — three sequential stage groups
@@ -49,6 +36,9 @@ spec:
         - - name: build-alpine
             template: build-image
             arguments:
+              artifacts:
+                - name: workspace
+                  from: "{{steps.clone.outputs.artifacts.workspace}}"
               parameters:
                 - name: dockerfile
                   value: ado-agent-alpine.dockerfile
@@ -57,6 +47,9 @@ spec:
           - name: build-ubuntu
             template: build-image
             arguments:
+              artifacts:
+                - name: workspace
+                  from: "{{steps.clone.outputs.artifacts.workspace}}"
               parameters:
                 - name: dockerfile
                   value: ado-agent-ubuntu.dockerfile
@@ -85,21 +78,28 @@ spec:
                   value: "kutzlabacr.azurecr.io/ado-agent-ubuntu:{{workflow.parameters.git-sha}}"
 
     # -------------------------------------------------------------------------
-    # Clone the repository into the shared workspace
+    # Clone the repository and emit the workspace as an artifact
     # -------------------------------------------------------------------------
     - name: clone-repo
+      outputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
       container:
         image: alpine/git:latest
-        command: [git, clone, "https://github.com/kutzlab-org/ado-agent.git", /workspace]
-        volumeMounts:
-          - name: workspace
-            mountPath: /workspace
+        command: [sh, -c]
+        args:
+          - git clone https://github.com/kutzlab-org/ado-agent.git /workspace &&
+            git -C /workspace checkout {{workflow.parameters.git-sha}}
 
     # -------------------------------------------------------------------------
     # Build and push a single image with Kaniko
     # -------------------------------------------------------------------------
     - name: build-image
       inputs:
+        artifacts:
+          - name: workspace
+            path: /workspace
         parameters:
           - name: dockerfile
           - name: image
@@ -112,14 +112,12 @@ spec:
           - "--cache=true"
           - "--cache-ttl=24h"
         volumeMounts:
-          - name: workspace
-            mountPath: /workspace
-          - name: registry-credentials
+          - name: kutzlabacr
             mountPath: /kaniko/.docker
       volumes:
-        - name: registry-credentials
+        - name: kutzlabacr
           secret:
-            secretName: registry-credentials
+            secretName: kutzlabacr
             items:
               - key: .dockerconfigjson
                 path: config.json
