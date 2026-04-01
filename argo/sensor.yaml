@@ -25,7 +25,7 @@ spec:
               kind: Workflow
               metadata:
                 generateName: ado-agent-build-
-                namespace: ado-agent
+                namespace: argowf
               spec:
                 workflowTemplateRef:
                   name: ado-agent-build-deploy
