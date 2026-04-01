@@ -19,6 +19,9 @@ metadata:
   name: ado-agent-build-deploy
   namespace: argowf
 spec:
+  podGC:
+    strategy: OnWorkflowCompletion
+
   arguments:
     parameters:
       - name: git-sha
