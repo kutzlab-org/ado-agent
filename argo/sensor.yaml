@@ -6,10 +6,9 @@ apiVersion: argoproj.io/v1alpha1
 kind: Sensor
 metadata:
   name: ado-agent-build-sensor
-  namespace: ado-agent
+  namespace: argo-events
 spec:
   template:
-    serviceAccountName: ado-agent-workflow-sa
   dependencies:
     - name: push-event
       eventSourceName: ado-agent-github

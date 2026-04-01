@@ -17,10 +17,8 @@ apiVersion: argoproj.io/v1alpha1
 kind: WorkflowTemplate
 metadata:
   name: ado-agent-build-deploy
-  namespace: ado-agent
+  namespace: argowf
 spec:
-  serviceAccountName: ado-agent-workflow-sa
-
   arguments:
     parameters:
       - name: git-sha

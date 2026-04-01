@@ -17,7 +17,7 @@ apiVersion: argoproj.io/v1alpha1
 kind: EventSource
 metadata:
   name: ado-agent-github
-  namespace: ado-agent
+  namespace: argo-events
 spec:
   service:
     ports:
