@@ -1,0 +1,17 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: argo-events
+  namespace: argo-events
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`argo-events.rss.kutzlab.io`)
+      kind: Rule
+      services:
+        - name: ado-agent-github-eventsource-svc
+          port: 12000
+  tls:
+    secretName: argo-events-tls
