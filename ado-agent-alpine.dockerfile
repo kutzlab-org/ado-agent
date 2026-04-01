@@ -6,7 +6,7 @@ ENV TARGETARCH="linux-musl-x64"
 # ENV TARGETARCH="linux-musl-arm64"
 
 RUN apk update && \
-  apk upgrade && \
+  apk upgrade --no-cache --ignore alpine-baselayout && \
   apk add bash curl gcc git icu-libs jq musl-dev python3-dev libffi-dev openssl-dev cargo make
 
 # Install Azure CLI
